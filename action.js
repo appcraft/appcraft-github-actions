@@ -4,15 +4,18 @@ const asana = require('asana');
 
 async function moveSection(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
-
+console.log('task', task)
   targets.forEach(async target => {
     const targetProject = task.projects.find(project => project.name === target.project);
+    console.log('targetProject :', targetProject)
+
     if (!targetProject) {
       core.info(`This task does not exist in "${target.project}" project`);
       return;
     }
     let targetSection = await client.sections.findByProject(targetProject.gid)
       .then(sections => sections.find(section => section.name === target.section));
+      console.log('targetSection :', targetSection)
     if (targetSection) {
       await client.sections.addTask(targetSection.gid, { task: taskId });
       core.info(`Moved to: ${target.project}/${target.section}`);
@@ -156,6 +159,7 @@ async function action() {
     case 'move-section': {
       const targetJSON = core.getInput('targets', {required: true});
       const targets = JSON.parse(targetJSON);
+
       const movedTasks = [];
       for(const taskId of foundAsanaTasks) {
         await moveSection(client, taskId, targets);
