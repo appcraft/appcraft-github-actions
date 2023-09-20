@@ -53,10 +53,12 @@ async function addComment(client, taskId, commentId, text, isPinned) {
 }
 
 async function buildClient(asanaPAT) {
-  return asana.Client.create({
+  const asanaClient =  asana.Client.create({
     defaultHeaders: { 'asana-enable': 'new-sections,string_ids' },
-    logAsanaChangeWarnings: false
+    logAsanaChangeWarnings: true
   }).useAccessToken(asanaPAT).authorize();
+console.log('asaNaClient : ', asanaClient)
+  return asanaClient;
 }
 
 async function action() {  
