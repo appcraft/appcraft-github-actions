@@ -5,6 +5,9 @@ const asana = require('asana');
 async function moveSection(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
 console.log('task', task)
+console.log('github payload: ', github.context.payload)
+console.log('github repo: ', github.context.repo)
+
   targets.forEach(async target => {
     const targetProject = task.projects.find(project => project.name === target.project);
     console.log('targetProject :', targetProject)
