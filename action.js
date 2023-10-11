@@ -44,20 +44,12 @@ async function updateStatus(client, taskId, targets) {
   const targetStatus = statusOptions.find(status => status.name === targets[0].status)
   console.log('targetStatus : ', targetStatus)
 
-  // const newFields = task.custom_fields.map(field => {
-  //   if (field.name === 'Status') {
-  //     return { ...field, display_value: targets[0].status }
-  //   }
-  //   return field;
-  // })
-
   const statusField = task.custom_fields.find(f => f.name === "Status")
-  // const newFields = [...task.custom_fields, { ...statusField, "display_value":  status }]
 
   const newFields = {
     [statusField.gid]: targetStatus.gid
   }
-  client.tasks.updateTask(task.gid, { custom_fields: newFields }).then((result) => {
+  client.tasks.update(task.gid, { custom_fields: newFields }).then((result) => {
     console.log('RESUTLT : ', result);
 });
 
@@ -95,7 +87,6 @@ async function buildClient(asanaPAT) {
     defaultHeaders: { 'asana-enable': 'new-sections,string_ids' },
     logAsanaChangeWarnings: true
   }).useAccessToken(asanaPAT).authorize();
-  console.log('asaNaClient : ', asanaClient)
   return asanaClient;
 }
 
@@ -112,6 +103,8 @@ async function action() {
   console.log('pull_request', PULL_REQUEST);
 
   const client = await buildClient(ASANA_PAT);
+  console.log('client : ', client)
+
   if (client === null) {
     throw new Error('client authorization failed');
   }
