@@ -57,7 +57,10 @@ async function updateStatus(client, taskId, targets) {
   const newFields = {
     [statusField.gid]: targetStatus.gid
   }
-  task.updateTask(task.gid, { custom_fields: newFields })
+  client.tasks.updateTask(task.gid, { custom_fields: newFields }).then((result) => {
+    console.log('RESUTLT : ', result);
+});
+
 }
 
 async function findComment(client, taskId, commentId) {
