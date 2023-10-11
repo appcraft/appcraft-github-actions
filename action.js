@@ -36,23 +36,21 @@ async function moveSection(client, taskId, targets) {
 async function updateStatus(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
   console.log('task', task)
-  const enumValues = task.custom_fields.find(f => f.name === 'Status').enum_value;
-  console.log('enumValues : ', enumValues)
 
   const statusOptions = task.custom_fields.find(f => f.name === 'Status').enum_options
-  console.log('statusOptions : ', statusOptions)
   const targetStatus = statusOptions.find(status => status.name === targets[0].status)
-  console.log('targetStatus : ', targetStatus)
+
+  if(!targetStatus){
+    return core.setFailed(`Status ${targets[0].status} does not exist.`)
+  }
 
   const statusField = task.custom_fields.find(f => f.name === "Status")
-
+ 
   const newFields = {
     [statusField.gid]: targetStatus.gid
   }
-  client.tasks.update(task.gid, { custom_fields: newFields }).then((result) => {
-    console.log('RESUTLT : ', result);
-});
 
+  client.tasks.update(task.gid, { custom_fields: newFields });
 }
 
 async function findComment(client, taskId, commentId) {
@@ -118,6 +116,10 @@ async function action() {
       continue;
     }
     foundAsanaTasks.push(taskId);
+  }
+
+  if(!foundAsanaTasks.length){
+    return core.setFailed(`This pull request is not linked to any asana task.`)
   }
   console.info(`found ${foundAsanaTasks.length} taskIds:`, foundAsanaTasks.join(','));
 
