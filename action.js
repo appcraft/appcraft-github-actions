@@ -12,9 +12,12 @@ console.log('github repo: ', github.context.repo)
     const targetProject = task.projects.find(project => project.name === target.project);
     console.log('targetProject :', targetProject)
 
+    if(!targetProject){
+      core.setFailed(`Asana project ${target.project} not found.`)
+    }
     if (!targetProject) {
       core.info(`This task does not exist in "${target.project}" project`);
-      return;
+      return; 
     }
     let targetSection = await client.sections.findByProject(targetProject.gid)
       .then(sections => sections.find(section => section.name === target.section));
@@ -23,6 +26,7 @@ console.log('github repo: ', github.context.repo)
       await client.sections.addTask(targetSection.gid, { task: taskId });
       core.info(`Moved to: ${target.project}/${target.section}`);
     } else {
+      core.setFailed(`Asana section ${target.section} not found.`)
       core.error(`Asana section ${target.section} not found.`);
     }
   });
@@ -94,6 +98,7 @@ async function action() {
   console.info(`found ${foundAsanaTasks.length} taskIds:`, foundAsanaTasks.join(','));
 
   console.info('calling', ACTION);
+  //Creash app if foundAsanaTasks is 0
   switch(ACTION){
     case 'assert-link': {
       const githubToken = core.getInput('github-token', {required: true});
