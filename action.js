@@ -36,7 +36,14 @@ async function moveSection(client, taskId, targets) {
 async function updateStatus(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
   console.log('task', task)
-console.log('enumValues : ', task.custom_fields.find(f=> f.name ==='Status').enum_value)
+  const enumValues = task.custom_fields.find(f => f.name === 'Status').enum_value;
+  console.log('enumValues : ', enumValues)
+
+  const statusOptions = task.custom_fields.find(f => f.name === 'Status').enum_options
+  console.log('statusOptions : ', statusOptions)
+  const targetStatus = statusOptions.find(status => status.name === targets[0].status)
+  console.log('targetStatus : ', targetStatus)
+
   // const newFields = task.custom_fields.map(field => {
   //   if (field.name === 'Status') {
   //     return { ...field, display_value: targets[0].status }
@@ -47,10 +54,10 @@ console.log('enumValues : ', task.custom_fields.find(f=> f.name ==='Status').enu
   const statusField = task.custom_fields.find(f => f.name === "Status")
   // const newFields = [...task.custom_fields, { ...statusField, "display_value":  status }]
 
-const newFields = {
-  [statusField.gid]: targets[0].status
-}
-  task.updateTask(task.gid, { custom_fields: newFields})
+  const newFields = {
+    [statusField.gid]: targetStatus.gid
+  }
+  task.updateTask(task.gid, { custom_fields: newFields })
 }
 
 async function findComment(client, taskId, commentId) {
