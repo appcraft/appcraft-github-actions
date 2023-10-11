@@ -4,24 +4,24 @@ const asana = require('asana');
 
 async function moveSection(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
-console.log('task', task)
-console.log('github payload: ', github.context.payload)
-console.log('github repo: ', github.context.repo)
+  console.log('task', task)
+  console.log('github payload: ', github.context.payload)
+  console.log('github repo: ', github.context.repo)
 
   targets.forEach(async target => {
     const targetProject = task.projects.find(project => project.name === target.project);
     console.log('targetProject :', targetProject)
 
-    if(!targetProject){
+    if (!targetProject) {
       core.setFailed(`Asana project ${target.project} not found.`)
     }
     if (!targetProject) {
       core.info(`This task does not exist in "${target.project}" project`);
-      return; 
+      return;
     }
     let targetSection = await client.sections.findByProject(targetProject.gid)
       .then(sections => sections.find(section => section.name === target.section));
-      console.log('targetSection :', targetSection)
+    console.log('targetSection :', targetSection)
     if (targetSection) {
       await client.sections.addTask(targetSection.gid, { task: taskId });
       core.info(`Moved to: ${target.project}/${target.section}`);
@@ -30,6 +30,27 @@ console.log('github repo: ', github.context.repo)
       core.error(`Asana section ${target.section} not found.`);
     }
   });
+}
+
+
+async function updateStatus(client, taskId, targets) {
+  const task = await client.tasks.findById(taskId);
+  console.log('task', task)
+console.log('enumValues : ', task.custom_fields.find(f=> f.name ==='Status').enum_value)
+  // const newFields = task.custom_fields.map(field => {
+  //   if (field.name === 'Status') {
+  //     return { ...field, display_value: targets[0].status }
+  //   }
+  //   return field;
+  // })
+
+  const statusField = task.custom_fields.find(f => f.name === "Status")
+  // const newFields = [...task.custom_fields, { ...statusField, "display_value":  status }]
+
+const newFields = {
+  [statusField.gid]: targets[0].status
+}
+  task.updateTask(task.gid, { custom_fields: newFields})
 }
 
 async function findComment(client, taskId, commentId) {
@@ -45,8 +66,8 @@ async function findComment(client, taskId, commentId) {
 }
 
 async function addComment(client, taskId, commentId, text, isPinned) {
-  if(commentId){
-    text += '\n'+commentId+'\n';
+  if (commentId) {
+    text += '\n' + commentId + '\n';
   }
   try {
     const comment = await client.tasks.addComment(taskId, {
@@ -60,28 +81,28 @@ async function addComment(client, taskId, commentId, text, isPinned) {
 }
 
 async function buildClient(asanaPAT) {
-  const asanaClient =  asana.Client.create({
+  const asanaClient = asana.Client.create({
     defaultHeaders: { 'asana-enable': 'new-sections,string_ids' },
     logAsanaChangeWarnings: true
   }).useAccessToken(asanaPAT).authorize();
-console.log('asaNaClient : ', asanaClient)
+  console.log('asaNaClient : ', asanaClient)
   return asanaClient;
 }
 
-async function action() {  
-  const 
-    ASANA_PAT = core.getInput('asana-pat', {required: true}),
-    ACTION = core.getInput('action', {required: true}),
+async function action() {
+  const
+    ASANA_PAT = core.getInput('asana-pat', { required: true }),
+    ACTION = core.getInput('action', { required: true }),
     TRIGGER_PHRASE = core.getInput('trigger-phrase') || '',
     PULL_REQUEST = github.context.payload.pull_request,
     REGEX_STRING = `${TRIGGER_PHRASE}(?:\s*)https:\\/\\/app.asana.com\\/(\\d+)\\/(?<project>\\d+)\\/(?<task>\\d+)`,
-    REGEX = new RegExp(REGEX_STRING,'g')
-  ;
+    REGEX = new RegExp(REGEX_STRING, 'g')
+    ;
 
   console.log('pull_request', PULL_REQUEST);
 
   const client = await buildClient(ASANA_PAT);
-  if(client === null){
+  if (client === null) {
     throw new Error('client authorization failed');
   }
 
@@ -99,10 +120,10 @@ async function action() {
 
   console.info('calling', ACTION);
   //Creash app if foundAsanaTasks is 0
-  switch(ACTION){
+  switch (ACTION) {
     case 'assert-link': {
-      const githubToken = core.getInput('github-token', {required: true});
-      const linkRequired = core.getInput('link-required', {required: true}) === 'true';
+      const githubToken = core.getInput('github-token', { required: true });
+      const linkRequired = core.getInput('link-required', { required: true }) === 'true';
       const octokit = new github.GitHub(githubToken);
       const statusState = (!linkRequired || foundAsanaTasks.length > 0) ? 'success' : 'error';
       core.info(`setting ${statusState} for ${github.context.payload.pull_request.head.sha}`);
@@ -117,13 +138,13 @@ async function action() {
     }
     case 'add-comment': {
       const commentId = core.getInput('comment-id'),
-        htmlText = core.getInput('text', {required: true}),
+        htmlText = core.getInput('text', { required: true }),
         isPinned = core.getInput('is-pinned') === 'true';
       const comments = [];
-      for(const taskId of foundAsanaTasks) {
-        if(commentId){
+      for (const taskId of foundAsanaTasks) {
+        if (commentId) {
           const comment = await findComment(client, taskId, commentId);
-          if(comment){
+          if (comment) {
             console.info('found existing comment', comment.gid);
             continue;
           }
@@ -134,11 +155,11 @@ async function action() {
       return comments;
     }
     case 'remove-comment': {
-      const commentId = core.getInput('comment-id', {required: true});
+      const commentId = core.getInput('comment-id', { required: true });
       const removedCommentIds = [];
-      for(const taskId of foundAsanaTasks) {
+      for (const taskId of foundAsanaTasks) {
         const comment = await findComment(client, taskId, commentId);
-        if(comment){
+        if (comment) {
           console.info("removing comment", comment.gid);
           try {
             await client.stories.delete(comment.gid);
@@ -153,7 +174,7 @@ async function action() {
     case 'complete-task': {
       const isComplete = core.getInput('is-complete') === 'true';
       const taskIds = [];
-      for(const taskId of foundAsanaTasks) {
+      for (const taskId of foundAsanaTasks) {
         console.info("marking task", taskId, isComplete ? 'complete' : 'incomplete');
         try {
           await client.tasks.update(taskId, {
@@ -167,15 +188,26 @@ async function action() {
       return taskIds;
     }
     case 'move-section': {
-      const targetJSON = core.getInput('targets', {required: true});
+      const targetJSON = core.getInput('targets', { required: true });
       const targets = JSON.parse(targetJSON);
 
       const movedTasks = [];
-      for(const taskId of foundAsanaTasks) {
+      for (const taskId of foundAsanaTasks) {
         await moveSection(client, taskId, targets);
         movedTasks.push(taskId);
       }
       return movedTasks;
+    }
+    case 'update-status': {
+      const targetJSON = core.getInput('targets', { required: true });
+      const targets = JSON.parse(targetJSON);
+
+      const updatedTasks = [];
+      for (const taskId of foundAsanaTasks) {
+        await updateStatus(client, taskId, targets);
+        updatedTasks.push(taskId);
+      }
+      return updatedTasks;
     }
     default:
       core.setFailed("unexpected action ${ACTION}");
