@@ -9,7 +9,7 @@ class GithubService {
   }
 
   getDeployements = async () => {
-    await this.octokit.request('GET /repos/{owner}/{repo}/deployments', {
+    return await this.octokit.request('GET /repos/{owner}/{repo}/deployments', {
       owner: 'appcraft',
       repo: 'appcraft-everywhere-platform',
       headers: {
@@ -19,7 +19,7 @@ class GithubService {
   };
 
   getPullRequests = async () => {
-    await this.octokit.request('GET /repos/{owner}/{repo}/branches', {
+    return await this.octokit.request('GET /repos/{owner}/{repo}/branches', {
       owner: 'appcraft',
       repo: 'appcraft-everywhere-platform',
       headers: {
