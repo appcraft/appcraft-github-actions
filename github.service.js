@@ -29,4 +29,6 @@ class GithubService {
   };
 }
 
-export default GithubService;
+module.exports = {
+  GithubService,
+};

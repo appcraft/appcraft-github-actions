@@ -1,7 +1,7 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 const asana = require('asana');
-const GithubService = require('./github.service');
+const { GithubService } = require('./github.service');
 
 async function moveSection(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
