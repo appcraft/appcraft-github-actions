@@ -37,15 +37,18 @@ async function updateStatus(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
   console.log('task', task)
 
-  const statusOptions = task.custom_fields.find(f => f.name === 'Status').enum_options
-  const targetStatus = statusOptions.find(status => status.name === targets[0].status)
+  const statusField = task.custom_fields.find(f => f.name === "Status");
+
+  if(!statusField){
+    return core.setFailed(`Custom field "Status" does not exist.`)
+  }
+  const statusOptions = statusField?.enum_options;
+  const targetStatus = statusOptions.find(status => status.name === targets[0].status);
 
   if(!targetStatus){
     return core.setFailed(`Status ${targets[0].status} does not exist.`)
   }
 
-  const statusField = task.custom_fields.find(f => f.name === "Status")
- 
   const newFields = {
     [statusField.gid]: targetStatus.gid
   }
