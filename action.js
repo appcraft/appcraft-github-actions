@@ -73,7 +73,6 @@ async function findComment(client, taskId, commentId) {
 }
 
 async function addComment(client, taskId, commentId, text, isPinned) {
-  console.log('REPO :', github.context.repo.repo)
   if (commentId) {
     text += '\n' + commentId + '\n';
   }
@@ -230,6 +229,15 @@ async function action() {
         updatedTasks.push(taskId);
       }
       return updatedTasks;
+    }
+
+    case 'log-infos': {
+      console.log('REPO :', github.context.repo.repo)
+      console.log('deployements :', github.context.repo.repo.deployements)
+      console.log('owner :', github.context.repo.owner)
+
+
+      return;
     }
     default:
       core.setFailed("unexpected action ${ACTION}");
