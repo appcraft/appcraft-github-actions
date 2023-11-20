@@ -1,65 +1,65 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 const asana = require('asana');
+const GithubService = require('./github.service');
 
 async function moveSection(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
-  console.log('task', task)
-  console.log('github payload: ', github.context.payload)
-  console.log('github repo: ', github.context.repo)
+  console.log('task', task);
+  console.log('github payload: ', github.context.payload);
+  console.log('github repo: ', github.context.repo);
 
-  targets.forEach(async target => {
-    const targetProject = task.projects.find(project => project.name === target.project);
-    console.log('targetProject :', targetProject)
+  targets.forEach(async (target) => {
+    const targetProject = task.projects.find((project) => project.name === target.project);
+    console.log('targetProject :', targetProject);
 
     if (!targetProject) {
-      core.setFailed(`Asana project ${target.project} not found.`)
+      core.setFailed(`Asana project ${target.project} not found.`);
     }
     if (!targetProject) {
       core.info(`This task does not exist in "${target.project}" project`);
       return;
     }
-    let targetSection = await client.sections.findByProject(targetProject.gid)
-      .then(sections => sections.find(section => section.name === target.section));
-    console.log('targetSection :', targetSection)
+    let targetSection = await client.sections
+      .findByProject(targetProject.gid)
+      .then((sections) => sections.find((section) => section.name === target.section));
+    console.log('targetSection :', targetSection);
     if (targetSection) {
       await client.sections.addTask(targetSection.gid, { task: taskId });
       core.info(`Moved to: ${target.project}/${target.section}`);
     } else {
-      core.setFailed(`Asana section ${target.section} not found.`)
+      core.setFailed(`Asana section ${target.section} not found.`);
       core.error(`Asana section ${target.section} not found.`);
     }
   });
 }
 
-
 async function updateStatus(client, taskId, targets) {
   const task = await client.tasks.findById(taskId);
-  console.log('task', task)
+  console.log('task', task);
 
-  const statusField = task.custom_fields.find(f => f.name === "Status");
+  const statusField = task.custom_fields.find((f) => f.name === 'Status');
 
-  if(!statusField){
-    return core.setFailed(`Custom field "Status" does not exist.`)
+  if (!statusField) {
+    return core.setFailed(`Custom field "Status" does not exist.`);
   }
   const statusOptions = statusField?.enum_options;
-  const targetStatus = statusOptions.find(status => status.name === targets[0].status);
+  const targetStatus = statusOptions.find((status) => status.name === targets[0].status);
 
-  if(!targetStatus){
-    return core.setFailed(`Status ${targets[0].status} does not exist.`)
+  if (!targetStatus) {
+    return core.setFailed(`Status ${targets[0].status} does not exist.`);
   }
 
   const newFields = {
-    [statusField.gid]: targetStatus.gid
-  }
+    [statusField.gid]: targetStatus.gid,
+  };
   core.info(`Change task status to: ${targetStatus.name}`);
   client.tasks.update(task.gid, { custom_fields: newFields });
 }
 
-const updateStatusOnDeploy = ()=>{
-
-  const deployements = github.context.repo.repo.deployements
-}
+const updateStatusOnDeploy = () => {
+  const deployements = github.context.repo.repo.deployements;
+};
 async function findComment(client, taskId, commentId) {
   let stories;
   try {
@@ -69,7 +69,7 @@ async function findComment(client, taskId, commentId) {
     throw error;
   }
 
-  return stories.find(story => story.text.indexOf(commentId) !== -1);
+  return stories.find((story) => story.text.indexOf(commentId) !== -1);
 }
 
 async function addComment(client, taskId, commentId, text, isPinned) {
@@ -90,32 +90,31 @@ async function addComment(client, taskId, commentId, text, isPinned) {
 async function buildClient(asanaPAT) {
   const asanaClient = asana.Client.create({
     defaultHeaders: { 'asana-enable': 'new-sections,string_ids' },
-    logAsanaChangeWarnings: true
-  }).useAccessToken(asanaPAT).authorize();
+    logAsanaChangeWarnings: true,
+  })
+    .useAccessToken(asanaPAT)
+    .authorize();
   return asanaClient;
 }
 
 async function action() {
-  const
-    ASANA_PAT = core.getInput('asana-pat', { required: true }),
+  const ASANA_PAT = core.getInput('asana-pat', { required: true }),
     ACTION = core.getInput('action', { required: true }),
     TRIGGER_PHRASE = core.getInput('trigger-phrase') || '',
     PULL_REQUEST = github.context.payload.pull_request,
     REGEX_STRING = `${TRIGGER_PHRASE}(?:\s*)https:\\/\\/app.asana.com\\/(\\d+)\\/(?<project>\\d+)\\/(?<task>\\d+)`,
-    REGEX = new RegExp(REGEX_STRING, 'g')
-    ;
-
+    REGEX = new RegExp(REGEX_STRING, 'g');
   console.log('pull_request', PULL_REQUEST);
 
   const client = await buildClient(ASANA_PAT);
-  console.log('client : ', client)
+  console.log('client : ', client);
 
   if (client === null) {
     throw new Error('client authorization failed');
   }
 
   //------UPDATE ON DEPLOY
-  if(ACTION === 'update-status-on-deploy') {
+  if (ACTION === 'update-status-on-deploy') {
     const targetJSON = core.getInput('targets', { required: true });
     const targets = JSON.parse(targetJSON);
 
@@ -134,8 +133,8 @@ async function action() {
     foundAsanaTasks.push(taskId);
   }
 
-  if(!foundAsanaTasks.length){
-    return core.setFailed(`This pull request is not linked to any asana task.`)
+  if (!foundAsanaTasks.length) {
+    return core.setFailed(`This pull request is not linked to any asana task.`);
   }
   console.info(`found ${foundAsanaTasks.length} taskIds:`, foundAsanaTasks.join(','));
 
@@ -146,14 +145,14 @@ async function action() {
       const githubToken = core.getInput('github-token', { required: true });
       const linkRequired = core.getInput('link-required', { required: true }) === 'true';
       const octokit = new github.GitHub(githubToken);
-      const statusState = (!linkRequired || foundAsanaTasks.length > 0) ? 'success' : 'error';
+      const statusState = !linkRequired || foundAsanaTasks.length > 0 ? 'success' : 'error';
       core.info(`setting ${statusState} for ${github.context.payload.pull_request.head.sha}`);
       octokit.repos.createStatus({
         ...github.context.repo,
-        'context': 'asana-link-presence',
-        'state': statusState,
-        'description': 'asana link not found',
-        'sha': github.context.payload.pull_request.head.sha,
+        context: 'asana-link-presence',
+        state: statusState,
+        description: 'asana link not found',
+        sha: github.context.payload.pull_request.head.sha,
       });
       break;
     }
@@ -172,7 +171,7 @@ async function action() {
         }
         const comment = await addComment(client, taskId, commentId, htmlText, isPinned);
         comments.push(comment);
-      };
+      }
       return comments;
     }
     case 'remove-comment': {
@@ -181,7 +180,7 @@ async function action() {
       for (const taskId of foundAsanaTasks) {
         const comment = await findComment(client, taskId, commentId);
         if (comment) {
-          console.info("removing comment", comment.gid);
+          console.info('removing comment', comment.gid);
           try {
             await client.stories.delete(comment.gid);
           } catch (error) {
@@ -196,16 +195,16 @@ async function action() {
       const isComplete = core.getInput('is-complete') === 'true';
       const taskIds = [];
       for (const taskId of foundAsanaTasks) {
-        console.info("marking task", taskId, isComplete ? 'complete' : 'incomplete');
+        console.info('marking task', taskId, isComplete ? 'complete' : 'incomplete');
         try {
           await client.tasks.update(taskId, {
-            completed: isComplete
+            completed: isComplete,
           });
         } catch (error) {
           console.error('rejecting promise', error);
         }
         taskIds.push(taskId);
-      };
+      }
       return taskIds;
     }
     case 'move-section': {
@@ -232,20 +231,24 @@ async function action() {
     }
 
     case 'log-infos': {
-      console.log('REPO :', github.context.repo.repo)
-      console.log('deployements :', github.context.repo.repo.deployements)
-      console.log('owner :', github.context.repo.owner)
+      const githubToken = core.getInput('github-token', { required: true });
 
+      const githubService = new GithubService(githubToken);
+      console.log('REPO :', github.context.repo.repo);
+      console.log('deployements :', await githubService.getDeployements());
+      console.log('pull requests :', await githubService.getPullRequests());
+
+      console.log('owner :', github.context.repo.owner);
 
       return;
     }
     default:
-      core.setFailed("unexpected action ${ACTION}");
+      core.setFailed('unexpected action ${ACTION}');
   }
 }
 
 module.exports = {
   action,
   default: action,
-  buildClient: buildClient
+  buildClient: buildClient,
 };
