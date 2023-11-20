@@ -52,10 +52,14 @@ async function updateStatus(client, taskId, targets) {
   const newFields = {
     [statusField.gid]: targetStatus.gid
   }
-
+  core.info(`Change task status to: ${targetStatus.name}`);
   client.tasks.update(task.gid, { custom_fields: newFields });
 }
 
+const updateStatusOnDeploy = ()=>{
+
+  const deployements = github.context.repo.repo.deployements
+}
 async function findComment(client, taskId, commentId) {
   let stories;
   try {
@@ -69,6 +73,7 @@ async function findComment(client, taskId, commentId) {
 }
 
 async function addComment(client, taskId, commentId, text, isPinned) {
+  console.log('REPO :', github.context.repo.repo)
   if (commentId) {
     text += '\n' + commentId + '\n';
   }
@@ -109,6 +114,15 @@ async function action() {
   if (client === null) {
     throw new Error('client authorization failed');
   }
+
+  //------UPDATE ON DEPLOY
+  if(ACTION === 'update-status-on-deploy') {
+    const targetJSON = core.getInput('targets', { required: true });
+    const targets = JSON.parse(targetJSON);
+
+    return await updateStatusOnDeploy(client, taskId, targets);
+  }
+  //------UPDATE ON DEPLOY
 
   console.info('looking in body', PULL_REQUEST.body, 'regex', REGEX_STRING);
   let foundAsanaTasks = [];
